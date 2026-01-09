@@ -89,6 +89,13 @@ button:hover{opacity:.9;}
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
 
+/* ✅ أهم إصلاح للهاتف: ما نعتمدوش على id كمتغيرات تلقائي */
+const loginFormEl  = document.getElementById("loginForm");
+const usernameEl   = document.getElementById("username");
+const passwordEl   = document.getElementById("password");
+const loadingEl    = document.getElementById("loading");
+const errorMsgEl   = document.getElementById("errorMsg");
+
 /* ✅ هنا التعديل الرئيسي: sessionStorage بدل localStorage
    - sessionStorage يمسح تلقائي أول ما تسكر المتصفح */
 function setSession(token, user){
@@ -166,40 +173,39 @@ async function api(action, payload){
   return await jsonp(action, payload);
 }
 
-loginForm.addEventListener("submit", async (e)=>{
+loginFormEl.addEventListener("submit", async (e)=>{
   e.preventDefault();
-  errorMsg.style.display="none";
-  loading.style.display="block";
+  errorMsgEl.style.display="none";
+  loadingEl.style.display="block";
 
   try{
     const out = await api("login", {
-      username: username.value.trim(),
-      password: password.value.trim()
+      username: usernameEl.value.trim(),
+      password: passwordEl.value.trim()
     });
 
-    loading.style.display="none";
+    loadingEl.style.display="none";
 
     if(out && out.ok && out.token && out.user){
       setSession(out.token, out.user);
       location.href = "dashboard.html";
     }else{
       clearSession();
-      errorMsg.textContent = "بيانات الدخول غير صحيحة";
-      errorMsg.style.display="block";
+      errorMsgEl.textContent = "بيانات الدخول غير صحيحة";
+      errorMsgEl.style.display="block";
     }
   }catch(err){
-    loading.style.display="none";
+    loadingEl.style.display="none";
     clearSession();
 
     if(String(err && err.message) === "JSONP_TIMEOUT"){
-      errorMsg.textContent =
-        "تعذر الاتصال بالخادم. لو يشتغل في اللابتوب وما يشتغلش في الهاتف: غالباً نشر الـ Web App في Apps Script مش (Anyone). " +
-        "ادخل Deploy > Manage deployments وخلي: Execute as (Me) و Who has access (Anyone).";
+      errorMsgEl.textContent =
+        "تعذر الاتصال بالخادم. لو يشتغل في اللابتوب وما يشتغلش في الهاتف: غالباً حظر DNS/Adblock/VPN أو كاش قديم. جرّب افتح الرابط مع ?v=1";
     }else{
-      errorMsg.textContent =
+      errorMsgEl.textContent =
         "خطأ اتصال. تأكد من رابط الـ Web App وأنه منشور (Deploy) بصلاحية (Anyone).";
     }
-    errorMsg.style.display="block";
+    errorMsgEl.style.display="block";
   }
 });
 </script>
