@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>لوحة التحكم | منظومة متابعة إدخال البصمات</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --gold:#c9a24d;
+  --dark:#0e0e0e;
+}
+
+/* ====== أساسيات ====== */
+*{
+  box-sizing:border-box;
+  font-family:"Segoe UI", Tahoma, Arial;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,.75)),
+    url("https://images.unsplash.com/photo-1508614999368-9260051292e5");
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  animation: fadeIn 1s ease forwards;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+/* ====== الكارد الرئيسي ====== */
+.dashboard{
+  width:420px;
+  background:rgba(15,15,15,.94);
+  border:1px solid var(--gold);
+  border-radius:20px;
+  padding:30px 24px;
+  box-shadow:0 30px 70px rgba(0,0,0,.85);
+  text-align:center;
+  animation: cardUp 1.1s ease forwards;
+}
+
+@keyframes cardUp{
+  from{
+    opacity:0;
+    transform:translateY(50px) scale(.95);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+/* ====== الشعار ====== */
+.logo{
+  width:110px;
+  height:110px;
+  margin:0 auto 10px;
+  animation:
+    logoEnter 1.2s ease forwards,
+    logoSwing 1.4s ease-in-out forwards;
+  animation-delay:0s,1.2s;
+}
+
+.logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+@keyframes logoEnter{
+  from{opacity:0; transform:translateY(-30px) scale(.8);}
+  to{opacity:1; transform:translateY(0) scale(1);}
+}
+
+/* ✅ نفس اللي قبل (0/30/60/100) */
+@keyframes logoSwing{
+  0%{transform:rotate(0deg);}
+  30%{transform:rotate(10deg);}
+  60%{transform:rotate(-10deg);}
+  100%{transform:rotate(0deg);}
+}
+
+/* ====== العناوين ====== */
+h1{
+  color:var(--gold);
+  font-size:20px;
+  margin:10px 0 4px;
+  opacity:0;
+  animation: fadeUp .8s ease forwards;
+  animation-delay:.8s;
+}
+
+h2{
+  color:#ddd;
+  font-size:13px;
+  font-weight:400;
+  margin-bottom:10px;
+  opacity:0;
+  animation: fadeUp .8s ease forwards;
+  animation-delay:1s;
+}
+
+@keyframes fadeUp{
+  from{opacity:0; transform:translateY(12px);}
+  to{opacity:1; transform:translateY(0);}
+}
+
+/* ====== شريط المستخدم/الصلاحية ====== */
+.userbar{
+  display:inline-flex;
+  gap:10px;
+  align-items:center;
+  justify-content:center;
+  padding:8px 12px;
+  margin-bottom:18px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  border:1px solid rgba(201,162,77,.45);
+  color:#e6c878;
+  font-size:12px;
+  opacity:0;
+  animation: fadeUp .8s ease forwards;
+  animation-delay:1.15s;
+}
+
+/* ====== الأزرار ====== */
+.buttons{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+}
+
+.btn{
+  padding:16px;
+  border:none;
+  border-radius:14px;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.2s;
+  opacity:0;
+  animation: fadeUp .8s ease forwards;
+}
+
+.btn-add{
+  background:linear-gradient(135deg, var(--gold), #e6c878);
+  color:#111;
+  animation-delay:1.2s;
+}
+
+.btn-report{
+  background:#222;
+  border:1px solid var(--gold);
+  color:var(--gold);
+  animation-delay:1.4s;
+}
+
+/* ✅ زر الاستعلامات (نفس شكل التقارير) */
+.btn-queries{
+  background:#222;
+  border:1px solid var(--gold);
+  color:var(--gold);
+  animation-delay:1.5s;
+}
+
+.btn-logout{
+  background:#111;
+  border:1px solid #444;
+  color:#ddd;
+  animation-delay:1.65s;
+}
+
+.btn:hover{
+  transform:scale(1.03);
+}
+
+/* ====== تذييل ====== */
+.footer{
+  margin-top:22px;
+  font-size:11px;
+  color:#aaa;
+  opacity:0;
+  animation: fadeUp .8s ease forwards;
+  animation-delay:1.8s;
+}
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+  <div class="logo">
+    <img src="604.png" alt="شعار اللواء 604">
+  </div>
+
+  <h1>لوحة التحكم</h1>
+  <h2>منظومة متابعة إدخال البصمات – اللواء 604 مشاة</h2>
+
+  <div class="userbar" id="userbar">...</div>
+
+  <div class="buttons">
+    <button class="btn btn-add" id="btnAdd" onclick="location.href='add.html'">
+      إضافة / تعديل أفراد
+    </button>
+
+    <!-- ✅ جديد: استعلامات (pending) -->
+    <button class="btn btn-queries" id="btnQueries" onclick="location.href='pending.html'">
+      استعلامات
+    </button>
+
+    <button class="btn btn-report" onclick="location.href='reports.html'">
+      التقارير
+    </button>
+
+    <button class="btn btn-logout" onclick="logout()">
+      خروج
+    </button>
+  </div>
+
+  <div class="footer">
+    © 2026 – ايوب الحوات
+  </div>
+
+</div>
+
+<script>
+/* ✅ تنظيف جلسة قديمة من localStorage (لو كنت تستعملها قبل) */
+(function clearOldLocal(){
+  try{
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }catch(e){}
+})();
+
+/* ✅ sessionStorage بدل localStorage */
+function getUser(){
+  try{ return JSON.parse(sessionStorage.getItem("user")||"null"); }
+  catch(e){ return null; }
+}
+function getToken(){ return sessionStorage.getItem("token") || ""; }
+
+function logout(){
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  location.href = "index.html";
+}
+
+(function init(){
+  const u = getUser();
+  const t = getToken();
+  if(!u || !t){
+    location.href="index.html";
+    return;
+  }
+
+  const name = u.full_name || u.username || "—";
+  const role = String(u.role || "report").toLowerCase();
+  userbar.textContent = `المستخدم: ${name} • الصلاحية: ${role}`;
+
+  if(role === "report"){
+    btnAdd.style.display = "none";
+    // ✅ الاستعلامات تبان للكل (report و admin)
+  }
+})();
+</script>
+
+</body>
+</html>

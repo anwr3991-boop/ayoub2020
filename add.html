@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>إضافة / تعديل / بصمة </title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{ --gold:#c9a24d; }
+*{ box-sizing:border-box; font-family:"Segoe UI",Tahoma,Arial; }
+body{ margin:0; background:#111; color:#fff; padding:18px; }
+
+.topbar{
+  max-width:1100px; margin:0 auto 12px;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+}
+.btn{ padding:10px 12px; border:none; border-radius:12px; font-weight:800; cursor:pointer; }
+.btn-primary{ background:linear-gradient(135deg,var(--gold),#e6c878); color:#111; }
+.btn-ghost{ background:#202020; border:1px solid rgba(201,162,77,.6); color:#e6c878; }
+.pill{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(201,162,77,.5); color:#e6c878; }
+
+.card{
+  max-width:1100px; margin:0 auto 14px;
+  background:#151515; border:1px solid rgba(201,162,77,.55);
+  border-radius:16px; padding:16px;
+}
+h2{ margin:0 0 10px; color:#e6c878; font-size:18px; }
+.grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+label{ display:block; font-size:13px; color:#ddd; margin:0 0 6px; }
+input{
+  width:100%; padding:10px 11px; border-radius:10px;
+  border:1px solid #333; background:#0f0f0f; color:#fff; outline:none;
+}
+.small{ font-size:12px; color:#aaa; margin-top:8px; }
+.bad{ display:none; color:#ff9a9a; font-size:13px; max-width:1100px; margin:0 auto 10px; }
+
+/* ===================== Popup (نافذة منبثقة) ===================== */
+.modal{
+  position:fixed; inset:0;
+  display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55);
+  z-index:9999;
+}
+.modal.show{ display:flex; }
+
+.modalBox{
+  width:min(520px, 92vw);
+  background:rgba(15,15,15,.96);
+  border:1px solid rgba(201,162,77,.7);
+  border-radius:18px;
+  box-shadow:0 30px 90px rgba(0,0,0,.85);
+  padding:18px 16px;
+  text-align:center;
+  transform:translateY(10px);
+  animation: popIn .18s ease forwards;
+}
+@keyframes popIn{
+  to{ transform:translateY(0); }
+}
+.modalTitle{
+  font-size:16px;
+  font-weight:900;
+  color:#e6c878;
+  margin:2px 0 10px;
+}
+.modalMsg{
+  font-size:14px;
+  color:#eee;
+  line-height:1.6;
+}
+.modalSub{
+  margin-top:10px;
+  font-size:12px;
+  color:#aaa;
+}
+.spinner{
+  width:42px; height:42px;
+  margin:8px auto 12px;
+  border-radius:50%;
+  border:4px solid rgba(255,255,255,.12);
+  border-top-color: var(--gold);
+  animation: spin 0.9s linear infinite;
+  display:none;
+}
+@keyframes spin{ to{ transform:rotate(360deg);} }
+
+.modalOk{
+  width:46px; height:46px;
+  margin:6px auto 10px;
+  border-radius:50%;
+  border:2px solid rgba(201,162,77,.7);
+  display:none;
+  align-items:center; justify-content:center;
+  color:#e6c878;
+  font-weight:900;
+  font-size:22px;
+}
+.modalErr{
+  width:46px; height:46px;
+  margin:6px auto 10px;
+  border-radius:50%;
+  border:2px solid rgba(255,120,120,.7);
+  display:none;
+  align-items:center; justify-content:center;
+  color:#ff9a9a;
+  font-weight:900;
+  font-size:22px;
+}
+.modalActions{
+  margin-top:12px;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.modalBtn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(201,162,77,.5);
+  background:#202020;
+  color:#e6c878;
+  font-weight:800;
+  cursor:pointer;
+  display:none;
+}
+.modalBtn.show{ display:inline-block; }
+
+/* ===================== Logo Effect (بدون تغيير التصميم) ===================== */
+.logoWrap{
+  width:110px;
+  height:110px;
+  margin:0 auto 10px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  animation: logoIn 0.9s ease forwards;
+}
+
+.logoWrap::before{
+  content:"";
+  position:absolute;
+  inset:-18px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(201,162,77,.35), rgba(0,0,0,0) 65%);
+  filter: blur(2px);
+  animation: haloPulse 3.2s ease-in-out infinite;
+}
+
+.logoWrap img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,.65));
+  animation:
+    logoFloat 3.8s ease-in-out infinite,
+    logoSwing 1.6s ease-in-out 1.0s;
+  transform-origin:50% 60%;
+}
+
+/* لمعة خفيفة تمر */
+.logoShine{
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  overflow:hidden;
+  pointer-events:none;
+}
+.logoShine::after{
+  content:"";
+  position:absolute;
+  top:-25%;
+  left:-60%;
+  width:55%;
+  height:160%;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(230,200,120,.25), rgba(255,255,255,0));
+  transform: rotate(20deg);
+  animation: shineMove 4.6s ease-in-out infinite;
+  filter: blur(0.2px);
+}
+
+@keyframes logoIn{
+  from{ opacity:0; transform:translateY(-18px) scale(.92); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+@keyframes logoFloat{
+  0%{ transform:translateY(0); }
+  50%{ transform:translateY(-6px); }
+  100%{ transform:translateY(0); }
+}
+
+/* نفس فكرة السوينق الجميل */
+@keyframes logoSwing{
+  0%{ transform:rotate(0deg); }
+  30%{ transform:rotate(10deg); }
+  60%{ transform:rotate(-10deg); }
+  100%{ transform:rotate(0deg); }
+}
+
+@keyframes haloPulse{
+  0%,100%{ transform:scale(1); opacity:.75; }
+  50%{ transform:scale(1.06); opacity:1; }
+}
+
+@keyframes shineMove{
+  0%{ left:-60%; opacity:0; }
+  12%{ opacity:1; }
+  40%{ left:120%; opacity:0; }
+  100%{ left:120%; opacity:0; }
+}
+</style>
+</head>
+<body>
+
+<!-- نافذة منبثقة -->
+<div class="modal" id="modal">
+  <div class="modalBox">
+    <div class="modalTitle" id="mTitle">...</div>
+
+    <div class="spinner" id="mSpin"></div>
+    <div class="modalOk" id="mOk">✓</div>
+    <div class="modalErr" id="mErrIcon">!</div>
+
+    <div class="modalMsg" id="mMsg">...</div>
+    <div class="modalSub" id="mSub"></div>
+
+    <div class="modalActions">
+      <button class="modalBtn" id="mCloseBtn" onclick="hideModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-ghost" onclick="location.href='dashboard.html'">رجوع</button>
+    <button class="btn btn-ghost" onclick="logout()">خروج</button>
+  </div>
+  <div class="pill" id="who"></div>
+</div>
+
+<div class="bad" id="err"></div>
+
+<div class="card">
+
+  <!-- ✅ الشعار بتأثير جميل (بدون حذف/تغيير أي شيء) -->
+  <div class="logoWrap">
+    <div class="logoShine"></div>
+    <img src="604.png" alt="شعار اللواء 604">
+  </div>
+
+  <h2>إضافة / تعديل / تسجيل بصمة</h2>
+  <div class="grid">
+    <div>
+      <label>بحث بالرقم الوطني</label>
+      <input id="search_nid" placeholder="اكتب الرقم الوطني ثم اضغط بحث">
+    </div>
+    <div style="display:flex; gap:10px; align-items:end;">
+      <button class="btn btn-ghost" style="flex:1" onclick="searchPerson()">بحث</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="clearForm()">تفريغ (مسح القائمة)</button>
+    </div>
+
+    <div><label>تسلسل</label><input id="serial" list="dl_serial"><datalist id="dl_serial"></datalist></div>
+    <div><label>تسلسل اللواء رقم 604</label><input id="serial_unit" list="dl_serial_unit"><datalist id="dl_serial_unit"></datalist></div>
+
+    <div><label>الاسم</label><input id="person_name" list="dl_name" placeholder="اكتب/اختر الاسم"><datalist id="dl_name"></datalist></div>
+    <div><label>الرقم الوطني</label><input id="national_id" list="dl_nid"><datalist id="dl_nid"></datalist></div>
+
+    <div><label>التبعية (الإدارة/السرية) </label><input id="dependency" list="dl_dependency"><datalist id="dl_dependency"></datalist></div>
+    <div><label>رقم الفصيل</label><input id="platoon" list="dl_platoon"><datalist id="dl_platoon"></datalist></div>
+    <div><label>رقم الحضيرة</label><input id="pen" list="dl_pen"><datalist id="dl_pen"></datalist></div>
+    <div><label>الصفة</label><input id="role" list="dl_role"><datalist id="dl_role"></datalist></div>
+    <div><label>الرتبة</label><input id="rank" list="dl_rank"><datalist id="dl_rank"></datalist></div>
+
+    <div style="grid-column:1/-1;">
+      <label style="display:flex; gap:10px; align-items:center;">
+        <input type="checkbox" id="registered" style="width:auto; transform:scale(1.1);">
+        تم تسجيل البصمة
+      </label>
+      <div class="small" id="regHint">حالة البصمة: —</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+    <button class="btn btn-primary" onclick="savePerson()">حفظ (إضافة/تعديل)</button>
+    <button class="btn btn-ghost" onclick="setRegOnly(1)">تتبع البصمة</button>
+  </div>
+
+  <div class="small" id="status"></div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
+
+/* ✅ تنظيف جلسة قديمة من localStorage (لو كنت تستعملها قبل) */
+(function clearOldLocal(){
+  try{
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }catch(e){}
+})();
+
+/* ✅ sessionStorage بدل localStorage */
+function getUser(){ try{return JSON.parse(sessionStorage.getItem("user")||"null")}catch{return null} }
+function getToken(){ return sessionStorage.getItem("token") || ""; }
+function logout(){
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  location.href="index.html";
+}
+
+function showErr(m){ err.textContent=m; err.style.display="block"; }
+function clearErr(){ err.textContent=""; err.style.display="none"; }
+
+/* ===================== أصوات (بدون ملفات) ===================== */
+let _ac = null;
+function audioCtx_(){
+  if(_ac) return _ac;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  _ac = new AC();
+  return _ac;
+}
+async function ensureAudio_(){
+  const ac = audioCtx_();
+  if(!ac) return;
+  if(ac.state === "suspended"){
+    try{ await ac.resume(); }catch(e){}
+  }
+}
+function beep_(freq=880, dur=0.09, type="sine", gain=0.06){
+  const ac = audioCtx_();
+  if(!ac) return;
+  const t0 = ac.currentTime;
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t0);
+  o.stop(t0 + dur + 0.02);
+}
+function soundWorking(){ ensureAudio_(); beep_(520, 0.06, "sine", 0.04); }
+function soundSuccess(){
+  ensureAudio_();
+  beep_(880, 0.07, "sine", 0.06);
+  setTimeout(()=>beep_(1175, 0.08, "sine", 0.06), 90);
+}
+function soundError(){
+  ensureAudio_();
+  beep_(220, 0.12, "square", 0.05);
+  setTimeout(()=>beep_(180, 0.14, "square", 0.05), 120);
+}
+["click","keydown","touchstart"].forEach(ev=>{
+  window.addEventListener(ev, ()=>ensureAudio_(), { once:true, passive:true });
+});
+
+/* ===================== نافذة منبثقة ===================== */
+let _modalTimer = null;
+
+function showModal({title, msg, state="loading", sub="", closable=false}){
+  if(_modalTimer){ clearTimeout(_modalTimer); _modalTimer=null; }
+
+  mTitle.textContent = title || "";
+  mMsg.textContent = msg || "";
+  mSub.textContent = sub || "";
+
+  mSpin.style.display = (state==="loading") ? "block" : "none";
+  mOk.style.display   = (state==="success") ? "flex" : "none";
+  mErrIcon.style.display = (state==="error") ? "flex" : "none";
+
+  mCloseBtn.classList.toggle("show", !!closable);
+  modal.classList.add("show");
+}
+
+function updateModal({title, msg, state, sub="", closable=null}){
+  if(title !== undefined) mTitle.textContent = title;
+  if(msg !== undefined) mMsg.textContent = msg;
+  if(sub !== undefined) mSub.textContent = sub;
+
+  if(state){
+    mSpin.style.display = (state==="loading") ? "block" : "none";
+    mOk.style.display   = (state==="success") ? "flex" : "none";
+    mErrIcon.style.display = (state==="error") ? "flex" : "none";
+  }
+  if(closable !== null){
+    mCloseBtn.classList.toggle("show", !!closable);
+  }
+}
+
+function hideModal(){
+  if(_modalTimer){ clearTimeout(_modalTimer); _modalTimer=null; }
+  modal.classList.remove("show");
+}
+
+function modalAutoHide(ms=900){
+  if(_modalTimer){ clearTimeout(_modalTimer); }
+  _modalTimer = setTimeout(()=>hideModal(), ms);
+}
+
+/* ===================== JSONP / API ===================== */
+function jsonp(action, payload){
+  return new Promise((resolve, reject)=>{
+    const cb = "cb_" + Date.now() + "_" + Math.floor(Math.random()*10000);
+    let done = false;
+
+    const timer = setTimeout(()=>{
+      if(done) return;
+      done = true;
+      cleanup();
+      reject(new Error("JSONP_TIMEOUT"));
+    }, 12000);
+
+    window[cb] = (data)=>{
+      if(done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(data);
+      cleanup();
+    };
+
+    const qs = new URLSearchParams();
+    qs.set("action", action);
+    qs.set("callback", cb);
+    qs.set("payload", JSON.stringify(payload || {}));
+    qs.set("_ts", String(Date.now())); // ✅ منع الكاش خصوصاً في الهاتف
+
+    const s = document.createElement("script");
+    s.src = API_URL + "?" + qs.toString();
+    s.onerror = ()=>{
+      if(done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error("JSONP_ERROR"));
+    };
+
+    function cleanup(){
+      try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
+      if(s && s.parentNode) s.parentNode.removeChild(s);
+    }
+    document.body.appendChild(s);
+  });
+}
+
+async function api(action, payload){
+  return await jsonp(action, payload);
+}
+
+function requireAdmin(){
+  const u = getUser();
+  const t = getToken();
+  if(!u || !t){ location.href="index.html"; return false; }
+  who.textContent = `المستخدم: ${u.full_name || u.username} — ${u.role}`;
+  if(u.role !== "admin"){
+    alert("هذه الصفحة خاصة بـ admin فقط");
+    location.href="dashboard.html";
+    return false;
+  }
+  return true;
+}
+
+/* ===================== واجهة ===================== */
+function setRegHint(){
+  regHint.textContent = registered.checked
+    ? "حالة البصمة: ✅ تم تسجيل البصمة مسبقاً"
+    : "حالة البصمة: ⛔ لم يتم تسجيل البصمة بعد";
+}
+registered.addEventListener("change", setRegHint);
+
+function clearForm(){
+  search_nid.value="";
+  serial.value=""; serial_unit.value="";
+  person_name.value=""; national_id.value="";
+  dependency.value=""; platoon.value=""; pen.value="";
+  role.value=""; rank.value="";
+  registered.checked=false;
+  setRegHint();
+  status.textContent="";
+}
+
+function fillForm(p){
+  serial.value = p.serial || "";
+  serial_unit.value = p.serial_unit || "";
+  person_name.value = p.name || "";
+  national_id.value = p.national_id || "";
+  dependency.value = p.dependency || "";
+  platoon.value = p.platoon || "";
+  pen.value = p.pen || "";
+  role.value = p.role || "";
+  rank.value = p.rank || "";
+  registered.checked = Number(p.registered||0) === 1;
+  setRegHint();
+}
+
+let ALL = [];
+function uniq(arr){
+  const s = new Set(); const out = [];
+  arr.forEach(v=>{
+    v = String(v||"").trim();
+    if(!v) return;
+    const k = v.toLowerCase();
+    if(s.has(k)) return;
+    s.add(k); out.push(v);
+  });
+  return out;
+}
+function escAttr(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function setOptions(dl, arr){
+  dl.innerHTML = uniq(arr).map(v=>`<option value="${escAttr(v)}"></option>`).join("");
+}
+function setNameOptionsWithNid(){
+  const opts = [];
+  const seen = new Set();
+  ALL.forEach(r=>{
+    const nm = (r.name||"").trim();
+    const nid = (r.national_id||"").trim();
+    if(!nm || !nid) return;
+    const v = `${nm} | ${nid}`;
+    const k = v.toLowerCase();
+    if(seen.has(k)) return;
+    seen.add(k);
+    opts.push(`<option value="${escAttr(v)}"></option>`);
+  });
+  dl_name.innerHTML = opts.join("");
+}
+function parseNidFromText(txt){
+  const m = String(txt||"").match(/\b\d{6,}\b/);
+  return m ? m[0] : "";
+}
+
+function findNidByFieldValue_(fieldKey, value){
+  value = String(value||"").trim();
+  if(!value) return "";
+  const row = ALL.find(r => String(r[fieldKey]||"").trim() === value);
+  return row ? String(row.national_id||"").trim() : "";
+}
+
+person_name.addEventListener("change", ()=>{
+  const nid = parseNidFromText(person_name.value);
+  if(nid){
+    search_nid.value = nid;
+    searchPerson();
+  }
+});
+
+national_id.addEventListener("change", ()=>{
+  const nid = parseNidFromText(national_id.value) || national_id.value.trim();
+  if(nid){
+    search_nid.value = nid;
+    searchPerson();
+  }
+});
+
+serial_unit.addEventListener("change", ()=>{
+  const v = (serial_unit.value||"").trim();
+  if(!v) return;
+  const nid = findNidByFieldValue_("serial_unit", v);
+  if(nid){
+    search_nid.value = nid;
+    searchPerson();
+  }else{
+    showModal({ title:"تنبيه", msg:"القيمة المختارة غير مرتبطة برقم وطني.", state:"error", closable:true });
+    soundError();
+  }
+});
+
+serial.addEventListener("change", ()=>{
+  const v = (serial.value||"").trim();
+  if(!v) return;
+  const nid = findNidByFieldValue_("serial", v);
+  if(nid){
+    search_nid.value = nid;
+    searchPerson();
+  }else{
+    showModal({ title:"تنبيه", msg:"القيمة المختارة غير مرتبطة برقم وطني.", state:"error", closable:true });
+    soundError();
+  }
+});
+
+async function loadLookups(){
+  clearErr();
+  status.textContent = "";
+
+  showModal({
+    title: "جلب البيانات",
+    msg: "جارٍ جلب البيانات...",
+    state: "loading",
+    sub: "الرجاء الانتظار"
+  });
+  soundWorking();
+
+  try{
+    const out = await api("list_all", { token:getToken() });
+    if(!out.ok){
+      updateModal({
+        title: "فشل",
+        msg: out.error || "فشل جلب البيانات",
+        state: "error",
+        sub: "تحقق من الاتصال أو من نشر الـ Web App",
+        closable: true
+      });
+      soundError();
+      return;
+    }
+
+    ALL = out.rows || [];
+    setOptions(dl_nid, ALL.map(r=>r.national_id));
+    setNameOptionsWithNid();
+    setOptions(dl_serial, ALL.map(r=>r.serial));
+    setOptions(dl_serial_unit, ALL.map(r=>r.serial_unit));
+    setOptions(dl_dependency, ALL.map(r=>r.dependency));
+    setOptions(dl_platoon, ALL.map(r=>r.platoon));
+    setOptions(dl_pen, ALL.map(r=>r.pen));
+    setOptions(dl_role, ALL.map(r=>r.role));
+    setOptions(dl_rank, ALL.map(r=>r.rank));
+
+    updateModal({
+      title: "تم ✅",
+      msg: "تم جلب البيانات بنجاح",
+      state: "success",
+      sub: "تقدر تبدأ تبحث وتعدّل"
+    });
+    soundSuccess();
+    modalAutoHide(900);
+
+  }catch(e){
+    updateModal({
+      title: "خطأ",
+      msg: "خطأ اتصال أثناء جلب البيانات",
+      state: "error",
+      sub: "حاول مرة ثانية",
+      closable: true
+    });
+    soundError();
+  }
+}
+
+async function searchPerson(){
+  clearErr();
+  const raw = (search_nid.value||"").trim();
+  const nid = parseNidFromText(raw) || raw;
+  if(!nid){
+    showModal({ title:"تنبيه", msg:"اكتب الرقم الوطني.", state:"error", closable:true });
+    soundError();
+    return;
+  }
+
+  showModal({ title:"بحث", msg:"جارٍ البحث...", state:"loading", sub:"الرقم الوطني: " + nid });
+  soundWorking();
+
+  const out = await api("get_person", { token:getToken(), national_id:nid });
+  if(out.ok){
+    if(out.person){
+      fillForm(out.person);
+      updateModal({ title:"تم ✅", msg:"تم العثور على البيانات", state:"success", sub:"تم تعبئة الحقول تلقائياً" });
+      soundSuccess();
+      modalAutoHide(800);
+    }else{
+      updateModal({ title:"غير موجود", msg:"غير موجود — تقدر تضيفه جديد", state:"success", sub:"تم وضع الرقم الوطني في الحقل" });
+      national_id.value = nid;
+      registered.checked=false;
+      setRegHint();
+      soundSuccess();
+      modalAutoHide(950);
+    }
+  }else{
+    updateModal({ title:"خطأ", msg: out.error || "خطأ", state:"error", closable:true });
+    soundError();
+  }
+}
+
+async function savePerson(){
+  clearErr();
+  const nid = (parseNidFromText(national_id.value) || national_id.value.trim());
+  const nm = person_name.value.split("|")[0].trim();
+
+  if(!nid){
+    showModal({ title:"تنبيه", msg:"الرقم الوطني مطلوب", state:"error", closable:true });
+    soundError(); return;
+  }
+  if(!nm){
+    showModal({ title:"تنبيه", msg:"الاسم مطلوب", state:"error", closable:true });
+    soundError(); return;
+  }
+
+  showModal({ title:"حفظ", msg:"جارٍ حفظ البيانات...", state:"loading", sub:"الرجاء الانتظار" });
+  soundWorking();
+
+  const person = {
+    serial: serial.value.trim(),
+    serial_unit: serial_unit.value.trim(),
+    name: nm,
+    national_id: nid,
+    dependency: dependency.value.trim(),
+    platoon: platoon.value.trim(),
+    pen: pen.value.trim(),
+    role: role.value.trim(),
+    rank: rank.value.trim(),
+    registered: registered.checked ? 1 : 0
+  };
+
+  const out = await api("upsert_person", { token:getToken(), person });
+  if(out.ok){
+    updateModal({
+      title:"تم ✅",
+      msg: (out.status === "updated") ? "تم تعديل البيانات بنجاح" : "تمت إضافة البيانات بنجاح",
+      state:"success",
+      sub:"تم تحديث القوائم"
+    });
+    soundSuccess();
+    await loadLookups();
+  }else{
+    updateModal({ title:"فشل", msg: out.error || "فشل الحفظ", state:"error", closable:true });
+    soundError();
+  }
+}
+
+async function setRegOnly(val){
+  clearErr();
+  const nid = (parseNidFromText(national_id.value) || national_id.value.trim());
+  if(!nid){
+    showModal({ title:"تنبيه", msg:"لازم تختار فرد أولاً", state:"error", closable:true });
+    soundError(); return;
+  }
+
+  showModal({
+    title:"تحديث البصمة",
+    msg:"جارٍ التسجيل...",
+    state:"loading",
+    sub:"الرقم الوطني: " + nid
+  });
+  soundWorking();
+
+  const out = await api("set_registered", { token:getToken(), national_id:nid, registered: val });
+  if(out.ok){
+    registered.checked = (out.registered === 1);
+    setRegHint();
+
+    updateModal({
+      title:"تم ✅",
+      msg: val ? "تم التسجيل بنجاح" : "تم تعيين: لم يتم التسجيل",
+      state:"success",
+      sub:"تم تحديث الحالة"
+    });
+    soundSuccess();
+    modalAutoHide(900);
+
+    try{
+      const out2 = await api("list_all", { token:getToken() });
+      if(out2.ok){
+        ALL = out2.rows || [];
+        setOptions(dl_nid, ALL.map(r=>r.national_id));
+        setNameOptionsWithNid();
+        setOptions(dl_serial, ALL.map(r=>r.serial));
+        setOptions(dl_serial_unit, ALL.map(r=>r.serial_unit));
+        setOptions(dl_dependency, ALL.map(r=>r.dependency));
+        setOptions(dl_platoon, ALL.map(r=>r.platoon));
+        setOptions(dl_pen, ALL.map(r=>r.pen));
+        setOptions(dl_role, ALL.map(r=>r.role));
+        setOptions(dl_rank, ALL.map(r=>r.rank));
+      }
+    }catch(e){}
+  }else{
+    updateModal({ title:"فشل", msg: out.error || "فشل تحديث الحالة", state:"error", closable:true });
+    soundError();
+  }
+}
+
+(function init(){
+  if(!requireAdmin()) return;
+  setRegHint();
+  loadLookups();
+})();
+</script>
+
+
+</body>
+</html>

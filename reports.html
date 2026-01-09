@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>التقارير | منظومة البصمات</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{ --gold:#c9a24d; }
+*{ box-sizing:border-box; font-family:"Segoe UI",Tahoma,Arial; }
+body{ margin:0; background:#111; color:#fff; padding:18px; }
+.topbar{
+  max-width:980px; margin:0 auto 12px;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+}
+.btn{ padding:10px 12px; border:none; border-radius:12px; font-weight:800; cursor:pointer; }
+.btn-ghost{ background:#202020; border:1px solid rgba(201,162,77,.6); color:#e6c878; }
+.pill{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(201,162,77,.5); color:#e6c878; }
+.card{
+  max-width:980px; margin:0 auto 14px;
+  background:#151515; border:1px solid rgba(201,162,77,.55);
+  border-radius:16px; padding:16px;
+}
+h2{ margin:0 0 10px; color:#e6c878; font-size:18px; }
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+label{ display:block; font-size:13px; color:#ddd; margin:0 0 6px; }
+input{
+  width:100%; padding:10px 11px; border-radius:10px;
+  border:1px solid #333; background:#0f0f0f; color:#fff; outline:none;
+}
+.statRow{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+@media (max-width:860px){ .statRow{ grid-template-columns:1fr; } }
+.stat{ background:#1c1c1c; border:1px solid rgba(201,162,77,.35); border-radius:14px; padding:12px; }
+.big{ font-size:22px; font-weight:900; margin-top:6px; color:#fff; }
+.small{ font-size:12px; color:#aaa; }
+.bad{ display:none; color:#ff9a9a; font-size:13px; max-width:980px; margin:0 auto 10px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-ghost" onclick="location.href='dashboard.html'">رجوع</button>
+    <button class="btn btn-ghost" onclick="logout()">خروج</button>
+  </div>
+  <div class="pill" id="who"></div>
+</div>
+
+<div class="bad" id="err"></div>
+
+<div class="card">
+  <h2>فلترة التقارير</h2>
+  <div class="grid">
+    <div><label>التبعية</label><input id="f_dep" placeholder="مثال: 18"></div>
+    <div><label>الفصيل</label><input id="f_platoon"></div>
+    <div><label>الحضيرة</label><input id="f_pen"></div>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+    <button class="btn btn-ghost" onclick="loadStats()">تحديث</button>
+    <button class="btn btn-ghost" onclick="clearFilters()">مسح الفلاتر</button>
+  </div>
+  <div class="small" id="note"></div>
+</div>
+
+<div class="card">
+  <h2>الملخص</h2>
+  <div class="statRow">
+    <div class="stat"><div class="small">إجمالي الأفراد</div><div class="big" id="total">—</div></div>
+    <div class="stat"><div class="small">تم التسجيل</div><div class="big" id="done">—</div></div>
+    <div class="stat"><div class="small">لم يتم التسجيل</div><div class="big" id="notDone">—</div></div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
+
+/* ✅ تنظيف جلسة قديمة من localStorage */
+(function clearOldLocal(){
+  try{
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }catch(e){}
+})();
+
+/* ✅ sessionStorage بدل localStorage */
+function getUser(){ try{return JSON.parse(sessionStorage.getItem("user")||"null")}catch{return null} }
+function getToken(){ return sessionStorage.getItem("token") || ""; }
+function logout(){
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  location.href="index.html";
+}
+function showErr(m){ err.textContent=m; err.style.display="block"; }
+function clearErr(){ err.textContent=""; err.style.display="none"; }
+
+function jsonp(action, payload){
+  return new Promise((resolve, reject)=>{
+    const cb = "cb_" + Date.now() + "_" + Math.floor(Math.random()*10000);
+    window[cb] = (data)=>{ resolve(data); cleanup(); };
+
+    const qs = new URLSearchParams();
+    qs.set("action", action);
+    qs.set("callback", cb);
+    qs.set("payload", JSON.stringify(payload || {}));
+    qs.set("_ts", String(Date.now())); // ✅ منع الكاش (مفيد في الهاتف)
+
+    const s = document.createElement("script");
+    s.src = API_URL + "?" + qs.toString();
+    s.onerror = ()=>{ reject(new Error("JSONP_ERROR")); cleanup(); };
+
+    function cleanup(){
+      try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
+      if(s && s.parentNode) s.parentNode.removeChild(s);
+    }
+    document.body.appendChild(s);
+  });
+}
+
+/* ✅✅ JSONP دائمًا (حل GitHub Pages/CORS) */
+async function api(action, payload){
+  return await jsonp(action, payload);
+}
+
+function requireAuth(){
+  const u = getUser();
+  const t = getToken();
+  if(!u || !t){ location.href="index.html"; return false; }
+  who.textContent = `المستخدم: ${u.full_name || u.username} — ${u.role}`;
+  return true;
+}
+
+function clearFilters(){
+  f_dep.value=""; f_platoon.value=""; f_pen.value="";
+  loadStats();
+}
+
+async function loadStats(){
+  clearErr();
+  note.textContent="جارٍ التحميل...";
+
+  const filters = { dependency:f_dep.value.trim(), platoon:f_platoon.value.trim(), pen:f_pen.value.trim() };
+  try{
+    const out = await api("stats", { token:getToken(), filters });
+    if(out.ok){
+      total.textContent = out.total;
+      done.textContent = out.done;
+      notDone.textContent = out.notDone;
+
+      const parts=[];
+      if(filters.dependency) parts.push("التبعية: "+filters.dependency);
+      if(filters.platoon) parts.push("الفصيل: "+filters.platoon);
+      if(filters.pen) parts.push("الحضيرة: "+filters.pen);
+      note.textContent = parts.length ? ("فلترة مفعلة — " + parts.join(" | ")) : "بدون فلترة (كل البيانات).";
+    }else{
+      showErr(out.error || "فشل");
+      note.textContent="";
+    }
+  }catch(e){
+    showErr("خطأ اتصال");
+    note.textContent="";
+  }
+}
+
+(function init(){
+  if(!requireAuth()) return;
+  loadStats();
+})();
+</script>
+
+
+</body>
+</html>

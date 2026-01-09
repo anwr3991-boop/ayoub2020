@@ -1,0 +1,313 @@
+<!-- pending.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>قائمة لم يتم التسجيل | منظومة البصمات</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{ --gold:#c9a24d; }
+*{ box-sizing:border-box; font-family:"Segoe UI",Tahoma,Arial; }
+body{ margin:0; background:#111; color:#fff; padding:18px; }
+.topbar{
+  max-width:1100px; margin:0 auto 12px;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+}
+.btn{ padding:10px 12px; border:none; border-radius:12px; font-weight:800; cursor:pointer; }
+.btn-primary{ background:linear-gradient(135deg,var(--gold),#e6c878); color:#111; }
+.btn-ghost{ background:#202020; border:1px solid rgba(201,162,77,.6); color:#e6c878; }
+.pill{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(201,162,77,.5); color:#e6c878; }
+.card{
+  max-width:1100px; margin:0 auto 14px;
+  background:#151515; border:1px solid rgba(201,162,77,.55);
+  border-radius:16px; padding:16px;
+}
+h2{ margin:0 0 10px; color:#e6c878; font-size:18px; }
+.grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+label{ display:block; font-size:13px; color:#ddd; margin:0 0 6px; }
+input{
+  width:100%; padding:10px 11px; border-radius:10px;
+  border:1px solid #333; background:#0f0f0f; color:#fff; outline:none;
+}
+.small{ font-size:12px; color:#aaa; margin-top:8px; }
+.bad{ display:none; color:#ff9a9a; font-size:13px; max-width:1100px; margin:0 auto 10px; }
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+th,td{ padding:8px; border-bottom:1px solid rgba(255,255,255,.08); text-align:right; }
+th{ color:#e6c878; font-weight:800; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-ghost" onclick="location.href='dashboard.html'">رجوع</button>
+    <button class="btn btn-ghost" onclick="logout()">خروج</button>
+  </div>
+  <div class="pill" id="who"></div>
+</div>
+
+<div class="bad" id="err"></div>
+
+<div class="card">
+  <h2>قائمة لم يتم التسجيل</h2>
+
+  <div class="grid">
+    <div>
+      <label>فلترة حسب التبعية</label>
+      <input id="f_dep" list="dl_dep" placeholder="اختر/اكتب التبعية">
+      <datalist id="dl_dep"></datalist>
+    </div>
+
+    <div>
+      <label>فلترة حسب الفصيل</label>
+      <input id="f_platoon" list="dl_platoon" placeholder="اختر الفصيل">
+      <datalist id="dl_platoon"></datalist>
+    </div>
+
+    <div>
+      <label>فلترة حسب الحضيرة</label>
+      <input id="f_pen" list="dl_pen" placeholder="اختر الحضيرة">
+      <datalist id="dl_pen"></datalist>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:end;">
+      <button class="btn btn-ghost" style="flex:1" onclick="loadPending()">تحديث</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="clearFilters()">مسح الفلاتر</button>
+    </div>
+  </div>
+
+  <div class="small" id="pendingCount"></div>
+
+  <div style="overflow:auto; margin-top:10px;">
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th><th>التبعية</th><th>الفصيل</th><th>الحضيرة</th><th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
+
+/* ✅ تنظيف جلسة قديمة من localStorage */
+(function clearOldLocal(){
+  try{
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }catch(e){}
+})();
+
+/* ✅ sessionStorage بدل localStorage */
+function getUser(){ try{return JSON.parse(sessionStorage.getItem("user")||"null")}catch{return null} }
+function getToken(){ return sessionStorage.getItem("token") || ""; }
+function logout(){
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  location.href="index.html";
+}
+function showErr(m){ err.textContent=m; err.style.display="block"; }
+function clearErr(){ err.textContent=""; err.style.display="none"; }
+
+// JSONP
+function jsonp(action, payload){
+  return new Promise((resolve, reject)=>{
+    const cb = "cb_" + Date.now() + "_" + Math.floor(Math.random()*10000);
+    window[cb] = (data)=>{ resolve(data); cleanup(); };
+
+    const qs = new URLSearchParams();
+    qs.set("action", action);
+    qs.set("callback", cb);
+    qs.set("payload", JSON.stringify(payload || {}));
+    qs.set("_ts", String(Date.now())); // ✅ منع الكاش (مفيد في الهاتف)
+
+    const s = document.createElement("script");
+    s.src = API_URL + "?" + qs.toString();
+    s.onerror = ()=>{ reject(new Error("JSONP_ERROR")); cleanup(); };
+
+    function cleanup(){
+      try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
+      if(s && s.parentNode) s.parentNode.removeChild(s);
+    }
+    document.body.appendChild(s);
+  });
+}
+
+// ✅ حل CORS: JSONP دائمًا (GitHub + file://)
+async function api(action, payload){
+  return await jsonp(action, payload);
+}
+
+function requireAuth(){
+  const u = getUser();
+  const t = getToken();
+  if(!u || !t){ location.href="index.html"; return false; }
+  who.textContent = `المستخدم: ${u.full_name || u.username} — ${u.role}`;
+  return true;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ Smart Filters Data ============ */
+let ALL = [];
+
+/* ✅ Normalizer (يحل مشكلة اختلاف أرقام عربية/مسافات) */
+function normalizeText(v){
+  v = String(v == null ? "" : v).trim();
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  for(let i=0;i<arabicDigits.length;i++){
+    v = v.replaceAll(arabicDigits[i], String(i));
+  }
+  v = v.replace(/\s+/g, " ").trim();
+  return v;
+}
+
+function uniq(arr){
+  const s = new Set();
+  const out = [];
+  arr.forEach(v=>{
+    v = normalizeText(v);
+    if(!v) return;
+    const k = v.toLowerCase();
+    if(s.has(k)) return;
+    s.add(k);
+    out.push(v);
+  });
+  return out;
+}
+
+function escAttr(s){
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function setOptions(dl, arr){
+  dl.innerHTML = uniq(arr).map(v=>`<option value="${escAttr(v)}"></option>`).join("");
+}
+
+function buildDepOptions_(){
+  setOptions(dl_dep, ALL.map(r=>r.dependency));
+}
+
+function buildPlatoonOptionsByDep_(dep){
+  dep = normalizeText(dep);
+  const pl = ALL
+    .filter(r => {
+      const d = normalizeText(r.dependency);
+      if(!dep) return true;
+      return d.toLowerCase() === dep.toLowerCase();
+    })
+    .map(r=>r.platoon);
+  setOptions(dl_platoon, pl);
+}
+
+function buildPenOptionsByDepPlatoon_(dep, platoon){
+  dep = normalizeText(dep);
+  platoon = normalizeText(platoon);
+
+  const pens = ALL
+    .filter(r=>{
+      const d = normalizeText(r.dependency);
+      const p = normalizeText(r.platoon);
+
+      if(dep && d.toLowerCase() !== dep.toLowerCase()) return false;
+      if(platoon && p.toLowerCase() !== platoon.toLowerCase()) return false;
+
+      return true;
+    })
+    .map(r=>r.pen);
+
+  setOptions(dl_pen, pens);
+}
+
+f_dep.addEventListener("change", ()=>{
+  f_platoon.value = "";
+  f_pen.value = "";
+  buildPlatoonOptionsByDep_(f_dep.value);
+  buildPenOptionsByDepPlatoon_(f_dep.value, "");
+});
+
+f_platoon.addEventListener("change", ()=>{
+  f_pen.value = "";
+  buildPenOptionsByDepPlatoon_(f_dep.value, f_platoon.value);
+});
+
+function clearFilters(){
+  f_dep.value=""; f_platoon.value=""; f_pen.value="";
+  buildDepOptions_();
+  buildPlatoonOptionsByDep_("");
+  buildPenOptionsByDepPlatoon_("", "");
+  loadPending();
+}
+
+async function loadLookups(){
+  try{
+    const out = await api("list_all", { token:getToken() });
+    if(out.ok){
+      ALL = out.rows || [];
+      buildDepOptions_();
+      buildPlatoonOptionsByDep_(f_dep.value);
+      buildPenOptionsByDepPlatoon_(f_dep.value, f_platoon.value);
+    }else{
+      ALL = [];
+    }
+  }catch(e){
+    ALL = [];
+  }
+}
+
+/* ============ Pending List ============ */
+async function loadPending(){
+  clearErr();
+  pendingBody.innerHTML="";
+  pendingCount.textContent="جارٍ التحميل...";
+
+  const filters = {
+    dependency: f_dep.value.trim(),
+    platoon: f_platoon.value.trim(),
+    pen: f_pen.value.trim()
+  };
+
+  const out = await api("list_people", { token:getToken(), filters });
+  if(out.ok){
+    const rows = out.rows || [];
+    pendingCount.textContent = `عدد النتائج: ${rows.length}`;
+
+    if(!rows.length){
+      pendingBody.innerHTML = `<tr><td colspan="5" style="color:#aaa;">لا توجد بيانات</td></tr>`;
+      return;
+    }
+
+    pendingBody.innerHTML = rows.map(r=>{
+      const st = (Number(r.registered||0) === 1) ? "تم التسجيل" : "لم يتم التسجيل";
+      return `
+        <tr>
+          <td>${esc(r.name||"")}</td>
+          <td>${esc(r.dependency||"")}</td>
+          <td>${esc(r.platoon||"")}</td>
+          <td>${esc(r.pen||"")}</td>
+          <td>${esc(st)}</td>
+        </tr>
+      `;
+    }).join("");
+  }else{
+    showErr(out.error || "فشل تحميل القائمة");
+    pendingCount.textContent="";
+  }
+}
+
+(async function init(){
+  if(!requireAuth()) return;
+  await loadLookups();
+  loadPending();
+})();
+</script>
+
+
+</body>
+</html>
