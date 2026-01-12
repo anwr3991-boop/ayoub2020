@@ -2,87 +2,275 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>التقارير | منظومة البصمات</title>
+<title>تقارير ايوب</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 :root{ --gold:#c9a24d; }
 *{ box-sizing:border-box; font-family:"Segoe UI",Tahoma,Arial; }
 body{ margin:0; background:#111; color:#fff; padding:18px; }
-.topbar{
+
+/* ===== Header Layout (مقسوم صفين) ===== */
+.header{
   max-width:980px; margin:0 auto 12px;
-  display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  display:flex; flex-direction:column; gap:10px;
 }
+.headerRow1{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:10px; flex-wrap:nowrap;
+}
+.headerRow2{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+
+/* يسار: زرين عمودي */
+.leftStack{
+  display:flex; flex-direction:column; gap:8px; align-items:flex-start;
+  flex:0 0 auto;
+}
+.leftStack .btn-ghost{
+  padding:8px 12px;
+  font-size:13px;
+  border-radius:12px;
+  min-width:200px;
+  text-align:center;
+}
+
+/* صف الطباعة */
+.printRow{ display:flex; gap:10px; flex-wrap:wrap; }
+
+/* يمين: الشعار */
+.rightSide{
+  display:flex; align-items:flex-start; justify-content:flex-start;
+  flex:0 0 auto;
+}
+
+/* Buttons */
 .btn{ padding:10px 12px; border:none; border-radius:12px; font-weight:800; cursor:pointer; }
 .btn-ghost{ background:#202020; border:1px solid rgba(201,162,77,.6); color:#e6c878; }
-.pill{ display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(201,162,77,.5); color:#e6c878; }
+
+/* user pill */
+.pill{
+  display:inline-block; padding:6px 10px; border-radius:999px;
+  font-size:12px; border:1px solid rgba(201,162,77,.5); color:#e6c878;
+}
+
+/* Cards */
 .card{
   max-width:980px; margin:0 auto 14px;
   background:#151515; border:1px solid rgba(201,162,77,.55);
   border-radius:16px; padding:16px;
 }
 h2{ margin:0 0 10px; color:#e6c878; font-size:18px; }
-.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
-label{ display:block; font-size:13px; color:#ddd; margin:0 0 6px; }
-input{
-  width:100%; padding:10px 11px; border-radius:10px;
-  border:1px solid #333; background:#0f0f0f; color:#fff; outline:none;
-}
-.statRow{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+
+/* Stats */
+.statRow{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 @media (max-width:860px){ .statRow{ grid-template-columns:1fr; } }
 .stat{ background:#1c1c1c; border:1px solid rgba(201,162,77,.35); border-radius:14px; padding:12px; }
 .big{ font-size:22px; font-weight:900; margin-top:6px; color:#fff; }
 .small{ font-size:12px; color:#aaa; }
 .bad{ display:none; color:#ff9a9a; font-size:13px; max-width:980px; margin:0 auto 10px; }
+
+/* Table */
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+th,td{
+  padding:10px 8px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:center;            /* ✅ توسيط */
+  vertical-align:middle;        /* ✅ توسيط عمودي */
+}
+th{ color:#e6c878; font-weight:900; }
+tfoot td{ font-weight:900; color:#fff; }
+.muted{ color:#aaa; }
+
+/* ✅ توسيط عنوان الجدول والنص اللي تحته */
+#tableCard h2, #tblHint{ text-align:center; }
+
+/* ============== Logo (شعار اللواء + تأثير) ============== */
+.brandWrap{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px;
+  border-radius:16px;
+  background: radial-gradient(120px 60px at 30% 20%, rgba(201,162,77,.18), transparent 70%),
+              linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+  border:1px solid rgba(201,162,77,.35);
+  position:relative;
+  overflow:hidden;
+}
+.brandWrap:before{
+  content:"";
+  position:absolute; inset:-60px;
+  background: conic-gradient(from 180deg, rgba(201,162,77,0), rgba(201,162,77,.28), rgba(201,162,77,0));
+  filter: blur(12px);
+  animation: halo 4.2s linear infinite;
+  opacity:.9;
+}
+@keyframes halo{ to{ transform: rotate(360deg); } }
+
+.brandLogo{
+  width:52px; height:52px; border-radius:16px;
+  display:grid; place-items:center;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%),
+              linear-gradient(135deg, rgba(201,162,77,.35), rgba(201,162,77,.05));
+  border:1px solid rgba(201,162,77,.6);
+  position:relative;
+  transform-style: preserve-3d;
+  animation: spin3d 3.6s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px rgba(201,162,77,.25) inset,
+    0 10px 30px rgba(0,0,0,.45),
+    0 0 22px rgba(201,162,77,.25);
+  overflow:hidden;
+}
+@keyframes spin3d{
+  0%   { transform: rotateX(10deg) rotateY(0deg); }
+  50%  { transform: rotateX(10deg) rotateY(180deg); }
+  100% { transform: rotateX(10deg) rotateY(360deg); }
+}
+.brandLogo:after{
+  content:"";
+  position:absolute; inset:-2px;
+  border-radius:18px;
+  background: linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0));
+  transform: translateX(-140%);
+  animation: shimmer 2.4s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes shimmer{
+  0%{ transform: translateX(-140%); opacity:.2; }
+  45%{ opacity:.6; }
+  100%{ transform: translateX(140%); opacity:.2; }
+}
+
+.brandLogo img{
+  width:44px; height:44px;
+  object-fit:contain;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.55));
+  transform: translateZ(18px);
+}
+
+.brandText{
+  position:relative; z-index:1;
+  display:flex; flex-direction:column; line-height:1.15;
+}
+.brandText b{ color:#e6c878; font-size:13px; letter-spacing:.3px; }
+.brandText span{ color:#cfcfcf; font-size:11px; opacity:.9; }
+
+/* ✅ موبايل */
+@media (max-width:560px){
+  .headerRow1{ flex-wrap:nowrap; }
+  .leftStack .btn-ghost{ min-width:200px; padding:7px 10px; font-size:12px; }
+  .brandText b{ font-size:12px; }
+  .brandText span{ font-size:10px; }
+
+  .printRow{ width:100%; }
+  .printRow .btn-ghost{ flex:1; }
+}
+
+/* ✅ بوكس الصلاحية في الأسفل وسط */
+.footerWho{
+  max-width:980px;
+  margin:10px auto 0;
+  display:flex;
+  justify-content:center;
+}
+
+/* ============== Print Control ============== */
+@media print{
+  body{ background:#fff !important; color:#000 !important; padding:0 !important; }
+  .header{ display:none !important; }
+  .footerWho{ display:none !important; }
+  .card{ border:1px solid #bbb !important; background:#fff !important; color:#000 !important; box-shadow:none !important; }
+  th{ color:#000 !important; }
+  .muted, .small{ color:#444 !important; }
+  .bad{ display:none !important; }
+  body[data-print="table"] #summaryCard{ display:none !important; }
+  body[data-print="summary"] #tableCard{ display:none !important; }
+}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button class="btn btn-ghost" onclick="location.href='dashboard.html'">رجوع</button>
-    <button class="btn btn-ghost" onclick="logout()">خروج</button>
+<div class="header">
+  <div class="headerRow1">
+    <div class="rightSide">
+      <div class="brandWrap" title="اللواء 604 مشاة">
+        <div class="brandLogo" aria-hidden="true">
+          <img src="604.png" alt="شعار اللواء 604">
+        </div>
+        <div class="brandText">
+          <b>اللواء 604 مشاة</b>
+          <span>تقارير عمليات اللواء</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="leftStack">
+      <button class="btn btn-ghost" onclick="logout()">خروج</button>
+      <button class="btn btn-ghost" onclick="location.href='dashboard.html'">رجوع</button>
+    </div>
   </div>
-  <div class="pill" id="who"></div>
+
+  <div class="headerRow2">
+    <div class="printRow">
+      <button class="btn btn-ghost" onclick="printPart('table')">طباعة جدول السرايا</button>
+      <button class="btn btn-ghost" onclick="printPart('summary')">طباعة الإجمالي</button>
+    </div>
+    <div></div>
+  </div>
 </div>
 
 <div class="bad" id="err"></div>
 
-<div class="card">
-  <h2>فلترة التقارير</h2>
-  <div class="grid">
-    <div><label>التبعية</label><input id="f_dep" placeholder="مثال: 18"></div>
-    <div><label>الفصيل</label><input id="f_platoon"></div>
-    <div><label>الحضيرة</label><input id="f_pen"></div>
+<div class="card" id="tableCard">
+  <h2>جدول الإنجاز حسب التبعية/السرية</h2>
+  <div class="small muted" id="tblHint"></div>
+
+  <div style="overflow:auto; margin-top:10px;">
+    <table>
+      <thead>
+        <tr>
+          <th>التبعية السرية</th>
+          <th>إجمالي</th>
+          <th>تم التسجيل</th>
+          <th>لم يتم التسجيل</th>
+          <th>نسبة الإنجاز</th>
+        </tr>
+      </thead>
+      <tbody id="rowsBody"></tbody>
+      <tfoot>
+        <tr>
+          <td>الإجمالي</td>
+          <td id="t_total">—</td>
+          <td id="t_done">—</td>
+          <td id="t_notDone">—</td>
+          <td id="t_pct">—</td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-    <button class="btn btn-ghost" onclick="loadStats()">تحديث</button>
-    <button class="btn btn-ghost" onclick="clearFilters()">مسح الفلاتر</button>
-  </div>
-  <div class="small" id="note"></div>
 </div>
 
-<div class="card">
-  <h2>الملخص</h2>
+<div class="card" id="summaryCard">
+  <h2 style="text-align:center;">الملخص_الاجمالي الكلي</h2>
   <div class="statRow">
     <div class="stat"><div class="small">إجمالي الأفراد</div><div class="big" id="total">—</div></div>
     <div class="stat"><div class="small">تم التسجيل</div><div class="big" id="done">—</div></div>
     <div class="stat"><div class="small">لم يتم التسجيل</div><div class="big" id="notDone">—</div></div>
+    <div class="stat"><div class="small">نسبة الإنجاز</div><div class="big" id="pct">—</div></div>
   </div>
 </div>
 
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
+<div class="footerWho">
+  <div class="pill" id="who"></div>
+</div>
 
-/* ✅ تنظيف جلسة قديمة من localStorage */
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyGooQCEMhVfrNWSIUVIaK050rcX3_Lj8NiqagqGHjwSChohg2lu2555uv2JmDumSM3qQ/exec";
+
 (function clearOldLocal(){
-  try{
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  }catch(e){}
+  try{ localStorage.removeItem("token"); localStorage.removeItem("user"); }catch(e){}
 })();
 
-/* ✅ sessionStorage بدل localStorage */
 function getUser(){ try{return JSON.parse(sessionStorage.getItem("user")||"null")}catch{return null} }
 function getToken(){ return sessionStorage.getItem("token") || ""; }
 function logout(){
@@ -102,7 +290,7 @@ function jsonp(action, payload){
     qs.set("action", action);
     qs.set("callback", cb);
     qs.set("payload", JSON.stringify(payload || {}));
-    qs.set("_ts", String(Date.now())); // ✅ منع الكاش (مفيد في الهاتف)
+    qs.set("_ts", String(Date.now()));
 
     const s = document.createElement("script");
     s.src = API_URL + "?" + qs.toString();
@@ -115,11 +303,7 @@ function jsonp(action, payload){
     document.body.appendChild(s);
   });
 }
-
-/* ✅✅ JSONP دائمًا (حل GitHub Pages/CORS) */
-async function api(action, payload){
-  return await jsonp(action, payload);
-}
+async function api(action, payload){ return await jsonp(action, payload); }
 
 function requireAuth(){
   const u = getUser();
@@ -128,45 +312,92 @@ function requireAuth(){
   who.textContent = `المستخدم: ${u.full_name || u.username} — ${u.role}`;
   return true;
 }
-
-function clearFilters(){
-  f_dep.value=""; f_platoon.value=""; f_pen.value="";
-  loadStats();
+function pct_(done,total){
+  if(!total) return "0%";
+  const p = (done/total)*100;
+  return (Math.round(p*10)/10).toString() + "%";
+}
+function printPart(which){
+  document.body.setAttribute("data-print", which);
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=> document.body.removeAttribute("data-print"), 250);
+  }, 50);
 }
 
-async function loadStats(){
+async function loadReport(){
   clearErr();
-  note.textContent="جارٍ التحميل...";
+  rowsBody.innerHTML = `<tr><td colspan="5" class="muted">جارٍ التحميل...</td></tr>`;
+  tblHint.textContent = "";
 
-  const filters = { dependency:f_dep.value.trim(), platoon:f_platoon.value.trim(), pen:f_pen.value.trim() };
   try{
-    const out = await api("stats", { token:getToken(), filters });
-    if(out.ok){
-      total.textContent = out.total;
-      done.textContent = out.done;
-      notDone.textContent = out.notDone;
-
-      const parts=[];
-      if(filters.dependency) parts.push("التبعية: "+filters.dependency);
-      if(filters.platoon) parts.push("الفصيل: "+filters.platoon);
-      if(filters.pen) parts.push("الحضيرة: "+filters.pen);
-      note.textContent = parts.length ? ("فلترة مفعلة — " + parts.join(" | ")) : "بدون فلترة (كل البيانات).";
-    }else{
+    const out = await api("list_all", { token:getToken() });
+    if(!out.ok){
       showErr(out.error || "فشل");
-      note.textContent="";
+      rowsBody.innerHTML = `<tr><td colspan="5" class="muted">فشل تحميل البيانات</td></tr>`;
+      return;
     }
+
+    const all = out.rows || [];
+    const map = new Map();
+
+    all.forEach(r=>{
+      const dep = String(r.dependency || "").trim() || "بدون";
+      const reg = Number(r.registered || 0) === 1 ? 1 : 0;
+
+      if(!map.has(dep)) map.set(dep, { dep:dep, total:0, done:0, notDone:0 });
+      const o = map.get(dep);
+      o.total++;
+      if(reg===1) o.done++; else o.notDone++;
+    });
+
+    const list = Array.from(map.values()).sort((a,b)=>{
+      const na = Number(a.dep), nb = Number(b.dep);
+      if(!isNaN(na) && !isNaN(nb)) return na-nb;
+      return a.dep.localeCompare(b.dep, "ar");
+    });
+
+    if(!list.length){
+      rowsBody.innerHTML = `<tr><td colspan="5" class="muted">لا توجد بيانات</td></tr>`;
+    }else{
+      rowsBody.innerHTML = list.map(x=>`
+        <tr>
+          <td>${x.dep}</td>
+          <td>${x.total}</td>
+          <td>${x.done}</td>
+          <td>${x.notDone}</td>
+          <td>${pct_(x.done, x.total)}</td>
+        </tr>
+      `).join("");
+    }
+
+    const totalAll = all.length;
+    const doneAll = all.reduce((s,r)=> s + (Number(r.registered||0)===1?1:0), 0);
+    const notDoneAll = totalAll - doneAll;
+    const pctAll = pct_(doneAll, totalAll);
+
+    total.textContent = totalAll;
+    done.textContent = doneAll;
+    notDone.textContent = notDoneAll;
+    pct.textContent = pctAll;
+
+    t_total.textContent = totalAll;
+    t_done.textContent = doneAll;
+    t_notDone.textContent = notDoneAll;
+    t_pct.textContent = pctAll;
+
+    tblHint.textContent = `عدد السرايا الظاهرة: ${list.length} — عدد الأفراد: ${totalAll}`;
   }catch(e){
     showErr("خطأ اتصال");
-    note.textContent="";
+    rowsBody.innerHTML = `<tr><td colspan="5" class="muted">خطأ اتصال</td></tr>`;
   }
 }
 
 (function init(){
   if(!requireAuth()) return;
-  loadStats();
+  loadReport();
 })();
 </script>
-
 
 </body>
 </html>

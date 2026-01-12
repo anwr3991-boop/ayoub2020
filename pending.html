@@ -3,7 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>قائمة لم يتم التسجيل | منظومة البصمات</title>
+<title>قائمة التسجيل | منظومة البصمات</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 :root{ --gold:#c9a24d; }
@@ -50,7 +50,7 @@ th{ color:#e6c878; font-weight:800; }
 <div class="bad" id="err"></div>
 
 <div class="card">
-  <h2>قائمة لم يتم التسجيل</h2>
+  <h2>قائمة التسجيل</h2>
 
   <div class="grid">
     <div>
@@ -71,7 +71,16 @@ th{ color:#e6c878; font-weight:800; }
       <datalist id="dl_pen"></datalist>
     </div>
 
-    <div style="display:flex; gap:10px; align-items:end;">
+    <div>
+      <label>فلترة حسب حالة التسجيل</label>
+      <input id="f_status" list="dl_status" placeholder="تم التسجيل / لم يتم التسجيل">
+      <datalist id="dl_status">
+        <option value="تم التسجيل"></option>
+        <option value="لم يتم التسجيل"></option>
+      </datalist>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:end; grid-column:1/-1;">
       <button class="btn btn-ghost" style="flex:1" onclick="loadPending()">تحديث</button>
       <button class="btn btn-ghost" style="flex:1" onclick="clearFilters()">مسح الفلاتر</button>
     </div>
@@ -83,7 +92,7 @@ th{ color:#e6c878; font-weight:800; }
     <table>
       <thead>
         <tr>
-          <th>الاسم</th><th>التبعية</th><th>الفصيل</th><th>الحضيرة</th><th>إجراء</th>
+          <th>تسلسل اللواء</th><th>التبعية</th><th>الفصيل</th><th>الحضيرة</th><th>حالة التسجيل</th>
         </tr>
       </thead>
       <tbody id="pendingBody"></tbody>
@@ -92,7 +101,7 @@ th{ color:#e6c878; font-weight:800; }
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbw4QeX2ulTazYWVadhYG3lsK17xB7y6kXhmZz7ip7tP93TOps3ylcgGbOz1zrOf2ztJaw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyGooQCEMhVfrNWSIUVIaK050rcX3_Lj8NiqagqGHjwSChohg2lu2555uv2JmDumSM3qQ/exec";
 
 /* ✅ تنظيف جلسة قديمة من localStorage */
 (function clearOldLocal(){
@@ -123,7 +132,7 @@ function jsonp(action, payload){
     qs.set("action", action);
     qs.set("callback", cb);
     qs.set("payload", JSON.stringify(payload || {}));
-    qs.set("_ts", String(Date.now())); // ✅ منع الكاش (مفيد في الهاتف)
+    qs.set("_ts", String(Date.now())); // ✅ منع الكاش
 
     const s = document.createElement("script");
     s.src = API_URL + "?" + qs.toString();
@@ -137,7 +146,7 @@ function jsonp(action, payload){
   });
 }
 
-// ✅ حل CORS: JSONP دائمًا (GitHub + file://)
+// ✅ حل CORS: JSONP دائمًا
 async function api(action, payload){
   return await jsonp(action, payload);
 }
@@ -155,7 +164,7 @@ function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 /* ============ Smart Filters Data ============ */
 let ALL = [];
 
-/* ✅ Normalizer (يحل مشكلة اختلاف أرقام عربية/مسافات) */
+/* ✅ Normalizer */
 function normalizeText(v){
   v = String(v == null ? "" : v).trim();
   const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
@@ -238,7 +247,7 @@ f_platoon.addEventListener("change", ()=>{
 });
 
 function clearFilters(){
-  f_dep.value=""; f_platoon.value=""; f_pen.value="";
+  f_dep.value=""; f_platoon.value=""; f_pen.value=""; f_status.value="";
   buildDepOptions_();
   buildPlatoonOptionsByDep_("");
   buildPenOptionsByDepPlatoon_("", "");
@@ -262,16 +271,40 @@ async function loadLookups(){
 }
 
 /* ============ Pending List ============ */
+function statusToRegistered_(txt){
+  txt = normalizeText(txt);
+  if(!txt) return null;
+  const t = txt.toLowerCase();
+  if(t === "تم التسجيل") return 1;
+  if(t === "لم يتم التسجيل") return 0;
+  return null;
+}
+
+function getSeq_(r){
+  // ✅ تسلسل اللواء في شيتك = serial_unit (عمود C)
+  return (
+    r.serial_unit ??  // C
+    r.serial ??       // B
+    r.id ??           // A
+    ""
+  );
+}
+
 async function loadPending(){
   clearErr();
   pendingBody.innerHTML="";
   pendingCount.textContent="جارٍ التحميل...";
+
+  const reg = statusToRegistered_(f_status.value);
 
   const filters = {
     dependency: f_dep.value.trim(),
     platoon: f_platoon.value.trim(),
     pen: f_pen.value.trim()
   };
+
+  // ✅ فلتر حالة التسجيل (لو محدد)
+  if(reg !== null) filters.registered = reg;
 
   const out = await api("list_people", { token:getToken(), filters });
   if(out.ok){
@@ -285,9 +318,10 @@ async function loadPending(){
 
     pendingBody.innerHTML = rows.map(r=>{
       const st = (Number(r.registered||0) === 1) ? "تم التسجيل" : "لم يتم التسجيل";
+      const seq = getSeq_(r);
       return `
         <tr>
-          <td>${esc(r.name||"")}</td>
+          <td>${esc(seq)}</td>
           <td>${esc(r.dependency||"")}</td>
           <td>${esc(r.platoon||"")}</td>
           <td>${esc(r.pen||"")}</td>
@@ -307,7 +341,6 @@ async function loadPending(){
   loadPending();
 })();
 </script>
-
 
 </body>
 </html>
