@@ -175,7 +175,7 @@ tfoot td{ font-weight:900; color:#fff; }
   justify-content:center;
 }
 
-/* ✅ ستايل داخلي لتقرير السرية (مخفي عادة) */
+/* ✅ ستايل داخلي لتقرير السرية */
 #unitPrintCard .block{
   margin-top:12px;
   padding:12px;
@@ -195,17 +195,17 @@ tfoot td{ font-weight:900; color:#fff; }
   font-weight:700;
 }
 
-/* ✅ شاشة تقرير السرية (تظهر مؤقتاً قبل الطباعة) */
-.unitMode{
+/* ✅ وضع تقرير السرية داخل الصفحة (يظهر فقط في unitprint) */
+body.unitMode{
   background:#111;
 }
-.unitMode .header,
-.unitMode #tableCard,
-.unitMode #summaryCard,
-.unitMode .footerWho{
+body.unitMode .header,
+body.unitMode #tableCard,
+body.unitMode #summaryCard,
+body.unitMode .footerWho{
   display:none !important;
 }
-.unitMode #unitPrintCard{
+body.unitMode #unitPrintCard{
   display:block !important;
 }
 
@@ -221,7 +221,7 @@ tfoot td{ font-weight:900; color:#fff; }
   body[data-print="table"] #summaryCard{ display:none !important; }
   body[data-print="summary"] #tableCard{ display:none !important; }
 
-  /* ✅ اطبع تقرير السرية فقط (ثابت للهاتف) */
+  /* ✅ اطبع تقرير السرية فقط */
   body.unitMode *{ visibility:hidden !important; }
   body.unitMode #unitPrintCard,
   body.unitMode #unitPrintCard *{ visibility:visible !important; }
@@ -330,6 +330,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyGooQCEMhVfrNWSIUVIaK0
 
 function getUser(){ try{return JSON.parse(sessionStorage.getItem("user")||"null")}catch{return null} }
 function getToken(){ return sessionStorage.getItem("token") || ""; }
+
 function logout(){
   sessionStorage.removeItem("token");
   sessionStorage.removeItem("user");
@@ -369,6 +370,7 @@ function requireAuth(){
   who.textContent = `المستخدم: ${u.full_name || u.username} — ${u.role}`;
   return true;
 }
+
 function pct_(done,total){
   if(!total) return "0%";
   const p = (done/total)*100;
@@ -400,9 +402,44 @@ function printPart(which){
 }
 
 /* =========================
-   ✅ تقرير سرية (بدون اسم/رقم وطني) + حل الهاتف 100%
+   ✅ حل جذري للهاتف: نطبع تقرير السرية عبر "وضع صفحة" (unitprint=1)
+   ✅ وحذف الاسم + الرقم الوطني من تقرير السرية
    ========================= */
 let ALL_ROWS = [];
+
+const PRINT_DEP_KEY = "print_unit_dep";
+
+function isUnitPrintMode(){
+  try{
+    const u = new URL(location.href);
+    return u.searchParams.get("unitprint") === "1";
+  }catch(e){
+    return false;
+  }
+}
+
+function enterUnitPrintMode(dep){
+  // نخزن السرية ونرجع نحمل الصفحة بوضع unitprint=1
+  sessionStorage.setItem(PRINT_DEP_KEY, dep);
+
+  const u = new URL(location.href);
+  u.searchParams.set("unitprint","1");
+  location.href = u.toString();
+}
+
+function exitUnitPrintMode(){
+  // ننظف الرابط ونرجع للوضع الطبيعي بعد الطباعة
+  sessionStorage.removeItem(PRINT_DEP_KEY);
+
+  const u = new URL(location.href);
+  u.searchParams.delete("unitprint");
+  history.replaceState(null, "", u.toString());
+  document.body.classList.remove("unitMode");
+
+  const unitCard = document.getElementById("unitPrintCard");
+  unitCard.innerHTML = "";
+  unitCard.style.display = "none";
+}
 
 function makePersonRow(r){
   const serial = r.serial_unit || r.serial || "";
@@ -440,8 +477,9 @@ function tableBlock(title, arr){
   `;
 }
 
-function printUnitReport(depName){
+function buildAndPrintUnit(depName){
   const dep = norm(depName);
+  const unitCard = document.getElementById("unitPrintCard");
 
   const rows = ALL_ROWS
     .filter(r => norm(r.dependency || "") === dep)
@@ -459,8 +497,6 @@ function printUnitReport(depName){
   const doneN = done.length;
   const notDoneN = notDone.length;
   const pct = pct_(doneN, totalCont);
-
-  const unitCard = document.getElementById("unitPrintCard");
 
   unitCard.innerHTML = `
     <h2 style="text-align:center; margin-bottom:6px;">تقرير السرية: ${escHtml(dep)}</h2>
@@ -486,19 +522,14 @@ function printUnitReport(depName){
     ${tableBlock("غير محدد", other)}
   `;
 
-  // ✅ نبدّل الصفحة مؤقتاً لتقرير السرية (هذي أهم نقطة للهاتف)
+  unitCard.style.display = "block";
   document.body.classList.add("unitMode");
 
-  // ✅ نضمن أن DOM يرسم قبل الطباعة (حل أندرويد)
+  // ✅ ضمان الرسم قبل الطباعة (مهم للهاتف)
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
       window.print();
-      // نرجع للوضع الطبيعي بعد ما تفتح شاشة الطباعة
-      setTimeout(()=>{
-        document.body.classList.remove("unitMode");
-        unitCard.innerHTML = "";
-        unitCard.style.display = "none";
-      }, 700);
+      setTimeout(()=> exitUnitPrintMode(), 900);
     });
   });
 }
@@ -508,7 +539,7 @@ rowsBody.addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-dep]");
   if(!btn) return;
   const dep = btn.getAttribute("data-dep") || "";
-  if(dep) printUnitReport(dep);
+  if(dep) enterUnitPrintMode(dep); // ✅ الحل الجذري
 });
 
 async function loadReport(){
@@ -527,8 +558,19 @@ async function loadReport(){
     const all = out.rows || [];
     ALL_ROWS = all;
 
-    const map = new Map();
+    // ✅ إذا وضع تقرير سرية: نبني التقرير ونطبع مباشرة
+    if(isUnitPrintMode()){
+      const dep = sessionStorage.getItem(PRINT_DEP_KEY) || "";
+      if(!dep){
+        showErr("لم يتم تحديد السرية للطباعة");
+        return;
+      }
+      buildAndPrintUnit(dep);
+      return;
+    }
 
+    // ✅ الوضع العادي: جدول السرايا
+    const map = new Map();
     let reserveAll = 0;
     let cutAll = 0;
     let otherAll = 0;
