@@ -47,6 +47,7 @@ body{ margin:0; background:#111; color:#fff; padding:18px; }
 /* Buttons */
 .btn{ padding:10px 12px; border:none; border-radius:12px; font-weight:800; cursor:pointer; }
 .btn-ghost{ background:#202020; border:1px solid rgba(201,162,77,.6); color:#e6c878; }
+.btn-mini{ padding:7px 10px; font-size:12px; border-radius:10px; min-width:unset; }
 
 /* user pill */
 .pill{
@@ -75,8 +76,8 @@ table{ width:100%; border-collapse:collapse; font-size:13px; }
 th,td{
   padding:10px 8px;
   border-bottom:1px solid rgba(255,255,255,.08);
-  text-align:center;            /* ✅ توسيط */
-  vertical-align:middle;        /* ✅ توسيط عمودي */
+  text-align:center;
+  vertical-align:middle;
 }
 th{ color:#e6c878; font-weight:900; }
 tfoot td{ font-weight:900; color:#fff; }
@@ -174,6 +175,26 @@ tfoot td{ font-weight:900; color:#fff; }
   justify-content:center;
 }
 
+/* ✅ ستايل داخلي لتقرير السرية (مخفي عادة) */
+#unitPrintCard .block{
+  margin-top:12px;
+  padding:12px;
+  border-radius:14px;
+  background:#1c1c1c;
+  border:1px solid rgba(201,162,77,.35);
+}
+#unitPrintCard h3{
+  margin:0 0 10px;
+  color:#e6c878;
+  font-size:15px;
+  text-align:center;
+}
+#unitPrintCard .mini{
+  font-size:12px;
+  color:#aaa;
+  font-weight:700;
+}
+
 /* ============== Print Control ============== */
 @media print{
   body{ background:#fff !important; color:#000 !important; padding:0 !important; }
@@ -185,6 +206,11 @@ tfoot td{ font-weight:900; color:#fff; }
   .bad{ display:none !important; }
   body[data-print="table"] #summaryCard{ display:none !important; }
   body[data-print="summary"] #tableCard{ display:none !important; }
+
+  /* ✅ طباعة تقرير سرية منفصل داخل نفس الصفحة (بدون popups) */
+  body[data-print="unit"] #tableCard{ display:none !important; }
+  body[data-print="unit"] #summaryCard{ display:none !important; }
+  body[data-print="unit"] #unitPrintCard{ display:block !important; }
 }
 </style>
 </head>
@@ -230,10 +256,13 @@ tfoot td{ font-weight:900; color:#fff; }
       <thead>
         <tr>
           <th>التبعية السرية</th>
-          <th>إجمالي</th>
+          <th>إجمالي (المستمرين)</th>
           <th>تم التسجيل</th>
           <th>لم يتم التسجيل</th>
+          <th>احتياط</th>
+          <th>منقطع</th>
           <th>نسبة الإنجاز</th>
+          <th>تقرير</th>
         </tr>
       </thead>
       <tbody id="rowsBody"></tbody>
@@ -243,7 +272,10 @@ tfoot td{ font-weight:900; color:#fff; }
           <td id="t_total">—</td>
           <td id="t_done">—</td>
           <td id="t_notDone">—</td>
+          <td id="t_reserve">—</td>
+          <td id="t_cut">—</td>
           <td id="t_pct">—</td>
+          <td class="muted">—</td>
         </tr>
       </tfoot>
     </table>
@@ -253,12 +285,16 @@ tfoot td{ font-weight:900; color:#fff; }
 <div class="card" id="summaryCard">
   <h2 style="text-align:center;">الملخص_الاجمالي الكلي</h2>
   <div class="statRow">
-    <div class="stat"><div class="small">إجمالي الأفراد</div><div class="big" id="total">—</div></div>
+    <div class="stat"><div class="small">إجمالي (المستمرين)</div><div class="big" id="total">—</div></div>
     <div class="stat"><div class="small">تم التسجيل</div><div class="big" id="done">—</div></div>
     <div class="stat"><div class="small">لم يتم التسجيل</div><div class="big" id="notDone">—</div></div>
     <div class="stat"><div class="small">نسبة الإنجاز</div><div class="big" id="pct">—</div></div>
   </div>
+  <div class="small muted" id="extras" style="text-align:center; margin-top:10px;"></div>
 </div>
+
+<!-- ✅ كرت مخفي لتقرير السرية (لا يغيّر التصميم) -->
+<div class="card" id="unitPrintCard" style="display:none;"></div>
 
 <div class="footerWho">
   <div class="pill" id="who"></div>
@@ -317,6 +353,24 @@ function pct_(done,total){
   const p = (done/total)*100;
   return (Math.round(p*10)/10).toString() + "%";
 }
+
+function norm(v){
+  v = String(v == null ? "" : v).trim();
+  v = v.replace(/\s+/g," ").trim();
+  return v;
+}
+
+function escHtml(s){
+  return String(s??"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function getState_(r){
+  // ✅ عمود platoon صار "الحالة": مستمر/احتياط/منقطع
+  return norm(r.platoon || "");
+}
+
 function printPart(which){
   document.body.setAttribute("data-print", which);
   setTimeout(()=>{
@@ -325,30 +379,161 @@ function printPart(which){
   }, 50);
 }
 
+/* =========================
+   ✅ تقرير سرية منفصل للطباعة (بدون Pop-up)
+   ========================= */
+let ALL_ROWS = [];
+
+function makePersonRow(r){
+  const serial = r.serial_unit || r.serial || "";
+  const name = r.name || "";
+  const nid  = r.national_id || "";
+  const dep  = r.dependency || "";
+  const st   = getState_(r) || "غير محدد";
+  const reg  = Number(r.registered || 0) === 1 ? "تم التسجيل" : "لم يتم التسجيل";
+  return { serial, name, nid, dep, st, reg };
+}
+
+function tableBlock(title, arr){
+  if(!arr.length) return "";
+  return `
+    <div class="block">
+      <h3>${escHtml(title)} <span class="mini">(${arr.length})</span></h3>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>تسلسل اللواء</th>
+              <th>الاسم</th>
+              <th>الرقم الوطني</th>
+              <th>الحالة</th>
+              <th>التسجيل</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${arr.map(x=>`
+              <tr>
+                <td>${escHtml(x.serial)}</td>
+                <td style="text-align:right;">${escHtml(x.name)}</td>
+                <td>${escHtml(x.nid)}</td>
+                <td>${escHtml(x.st)}</td>
+                <td>${escHtml(x.reg)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function printUnitReport(depName){
+  const dep = norm(depName);
+
+  const rows = ALL_ROWS
+    .filter(r => norm(r.dependency || "") === dep)
+    .map(makePersonRow);
+
+  const cont = rows.filter(x => x.st === "مستمر");
+  const reserve = rows.filter(x => x.st === "احتياط");
+  const cut = rows.filter(x => x.st === "منقطع");
+  const other = rows.filter(x => x.st !== "مستمر" && x.st !== "احتياط" && x.st !== "منقطع");
+
+  const done = cont.filter(x => x.reg === "تم التسجيل");
+  const notDone = cont.filter(x => x.reg === "لم يتم التسجيل");
+
+  const totalCont = cont.length;
+  const doneN = done.length;
+  const notDoneN = notDone.length;
+  const pct = pct_(doneN, totalCont);
+
+  const unitCard = document.getElementById("unitPrintCard");
+
+  unitCard.innerHTML = `
+    <h2 style="text-align:center; margin-bottom:6px;">تقرير السرية: ${escHtml(dep)}</h2>
+    <div class="small muted" style="text-align:center; margin-bottom:10px;">
+      المجموع والنسبة تُحتسب على (المستمرين) فقط — وتُعرض (احتياط/منقطع) كأرقام منفصلة
+    </div>
+
+    <div class="statRow" style="grid-template-columns:repeat(6,1fr);">
+      <div class="stat"><div class="small">إجمالي المستمرين</div><div class="big">${totalCont}</div></div>
+      <div class="stat"><div class="small">تم التسجيل (مستمر)</div><div class="big">${doneN}</div></div>
+      <div class="stat"><div class="small">لم يتم التسجيل (المتبقي)</div><div class="big">${notDoneN}</div></div>
+      <div class="stat"><div class="small">نسبة الإنجاز</div><div class="big">${escHtml(pct)}</div></div>
+      <div class="stat"><div class="small">احتياط</div><div class="big">${reserve.length}</div></div>
+      <div class="stat"><div class="small">منقطع</div><div class="big">${cut.length}</div></div>
+    </div>
+
+    ${other.length ? `<div class="small muted" style="text-align:center; margin-top:8px;">غير محدد: ${other.length}</div>` : ""}
+
+    ${tableBlock("المستمرين — تم التسجيل", done)}
+    ${tableBlock("المستمرين — لم يتم التسجيل (المتبقي)", notDone)}
+    ${tableBlock("الاحتياط", reserve)}
+    ${tableBlock("المنقطع", cut)}
+    ${tableBlock("غير محدد", other)}
+  `;
+
+  unitCard.style.display = "block";
+
+  document.body.setAttribute("data-print", "unit");
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{
+      document.body.removeAttribute("data-print");
+      unitCard.innerHTML = "";
+      unitCard.style.display = "none";
+    }, 300);
+  }, 80);
+}
+
+/* زر تقرير داخل الجدول */
+rowsBody.addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-dep]");
+  if(!btn) return;
+  const dep = btn.getAttribute("data-dep") || "";
+  if(dep) printUnitReport(dep);
+});
+
 async function loadReport(){
   clearErr();
-  rowsBody.innerHTML = `<tr><td colspan="5" class="muted">جارٍ التحميل...</td></tr>`;
+  rowsBody.innerHTML = `<tr><td colspan="8" class="muted">جارٍ التحميل...</td></tr>`;
   tblHint.textContent = "";
 
   try{
     const out = await api("list_all", { token:getToken() });
     if(!out.ok){
       showErr(out.error || "فشل");
-      rowsBody.innerHTML = `<tr><td colspan="5" class="muted">فشل تحميل البيانات</td></tr>`;
+      rowsBody.innerHTML = `<tr><td colspan="8" class="muted">فشل تحميل البيانات</td></tr>`;
       return;
     }
 
     const all = out.rows || [];
+    ALL_ROWS = all;
+
     const map = new Map();
+
+    let reserveAll = 0;
+    let cutAll = 0;
+    let otherAll = 0;
 
     all.forEach(r=>{
       const dep = String(r.dependency || "").trim() || "بدون";
       const reg = Number(r.registered || 0) === 1 ? 1 : 0;
+      const st = getState_(r);
 
-      if(!map.has(dep)) map.set(dep, { dep:dep, total:0, done:0, notDone:0 });
+      if(!map.has(dep)) map.set(dep, { dep:dep, total:0, done:0, notDone:0, reserve:0, cut:0, other:0 });
       const o = map.get(dep);
-      o.total++;
-      if(reg===1) o.done++; else o.notDone++;
+
+      if(st === "مستمر"){
+        o.total++;
+        if(reg===1) o.done++; else o.notDone++;
+      }else if(st === "احتياط"){
+        o.reserve++; reserveAll++;
+      }else if(st === "منقطع"){
+        o.cut++; cutAll++;
+      }else{
+        o.other++; otherAll++;
+      }
     });
 
     const list = Array.from(map.values()).sort((a,b)=>{
@@ -358,22 +543,27 @@ async function loadReport(){
     });
 
     if(!list.length){
-      rowsBody.innerHTML = `<tr><td colspan="5" class="muted">لا توجد بيانات</td></tr>`;
+      rowsBody.innerHTML = `<tr><td colspan="8" class="muted">لا توجد بيانات</td></tr>`;
     }else{
       rowsBody.innerHTML = list.map(x=>`
         <tr>
-          <td>${x.dep}</td>
+          <td>${escHtml(x.dep)}</td>
           <td>${x.total}</td>
           <td>${x.done}</td>
           <td>${x.notDone}</td>
+          <td>${x.reserve}</td>
+          <td>${x.cut}</td>
           <td>${pct_(x.done, x.total)}</td>
+          <td>
+            <button class="btn btn-ghost btn-mini" data-dep="${escHtml(x.dep)}">طباعة تقرير</button>
+          </td>
         </tr>
       `).join("");
     }
 
-    const totalAll = all.length;
-    const doneAll = all.reduce((s,r)=> s + (Number(r.registered||0)===1?1:0), 0);
-    const notDoneAll = totalAll - doneAll;
+    const totalAll = list.reduce((s,x)=> s + x.total, 0);
+    const doneAll = list.reduce((s,x)=> s + x.done, 0);
+    const notDoneAll = list.reduce((s,x)=> s + x.notDone, 0);
     const pctAll = pct_(doneAll, totalAll);
 
     total.textContent = totalAll;
@@ -384,12 +574,22 @@ async function loadReport(){
     t_total.textContent = totalAll;
     t_done.textContent = doneAll;
     t_notDone.textContent = notDoneAll;
+    t_reserve.textContent = reserveAll;
+    t_cut.textContent = cutAll;
     t_pct.textContent = pctAll;
 
-    tblHint.textContent = `عدد السرايا الظاهرة: ${list.length} — عدد الأفراد: ${totalAll}`;
+    const extraParts = [
+      `احتياط: ${reserveAll}`,
+      `منقطع: ${cutAll}`
+    ];
+    if(otherAll) extraParts.push(`غير محدد: ${otherAll}`);
+
+    extras.textContent = `لا تُحتسب هذه الفئات ضمن المجموع/النسبة — ${extraParts.join(" — ")}`;
+    tblHint.textContent = `عدد السرايا الظاهرة: ${list.length} — عدد المستمرين: ${totalAll} — ${extraParts.join(" — ")}`;
+
   }catch(e){
     showErr("خطأ اتصال");
-    rowsBody.innerHTML = `<tr><td colspan="5" class="muted">خطأ اتصال</td></tr>`;
+    rowsBody.innerHTML = `<tr><td colspan="8" class="muted">خطأ اتصال</td></tr>`;
   }
 }
 

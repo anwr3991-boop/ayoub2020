@@ -60,8 +60,8 @@ th{ color:#e6c878; font-weight:800; }
     </div>
 
     <div>
-      <label>فلترة حسب الفصيل</label>
-      <input id="f_platoon" list="dl_platoon" placeholder="اختر الفصيل">
+      <label>فلترة حسب الحالة</label>
+      <input id="f_platoon" list="dl_platoon" placeholder="اختر الحالة (مستمر/احتياط/منقطع)">
       <datalist id="dl_platoon"></datalist>
     </div>
 
@@ -92,7 +92,7 @@ th{ color:#e6c878; font-weight:800; }
     <table>
       <thead>
         <tr>
-          <th>تسلسل اللواء</th><th>التبعية</th><th>الفصيل</th><th>الحضيرة</th><th>حالة التسجيل</th>
+          <th>تسلسل اللواء</th><th>الاسم</th><th>التبعية</th><th>الحالة</th><th>الحضيرة</th><th>حالة التسجيل</th>
         </tr>
       </thead>
       <tbody id="pendingBody"></tbody>
@@ -312,7 +312,7 @@ async function loadPending(){
     pendingCount.textContent = `عدد النتائج: ${rows.length}`;
 
     if(!rows.length){
-      pendingBody.innerHTML = `<tr><td colspan="5" style="color:#aaa;">لا توجد بيانات</td></tr>`;
+      pendingBody.innerHTML = `<tr><td colspan="6" style="color:#aaa;">لا توجد بيانات</td></tr>`;
       return;
     }
 
@@ -322,6 +322,7 @@ async function loadPending(){
       return `
         <tr>
           <td>${esc(seq)}</td>
+          <td>${esc(r.name||"")}</td>
           <td>${esc(r.dependency||"")}</td>
           <td>${esc(r.platoon||"")}</td>
           <td>${esc(r.pen||"")}</td>
