@@ -195,6 +195,20 @@ tfoot td{ font-weight:900; color:#fff; }
   font-weight:700;
 }
 
+/* ✅ شاشة تقرير السرية (تظهر مؤقتاً قبل الطباعة) */
+.unitMode{
+  background:#111;
+}
+.unitMode .header,
+.unitMode #tableCard,
+.unitMode #summaryCard,
+.unitMode .footerWho{
+  display:none !important;
+}
+.unitMode #unitPrintCard{
+  display:block !important;
+}
+
 /* ============== Print Control ============== */
 @media print{
   body{ background:#fff !important; color:#000 !important; padding:0 !important; }
@@ -207,11 +221,11 @@ tfoot td{ font-weight:900; color:#fff; }
   body[data-print="table"] #summaryCard{ display:none !important; }
   body[data-print="summary"] #tableCard{ display:none !important; }
 
-  /* ✅ حل الهاتف/الكمبيوتر: اطبع تقرير السرية فقط */
-  body.print-unit *{ visibility:hidden !important; }
-  body.print-unit #unitPrintCard,
-  body.print-unit #unitPrintCard *{ visibility:visible !important; }
-  body.print-unit #unitPrintCard{
+  /* ✅ اطبع تقرير السرية فقط (ثابت للهاتف) */
+  body.unitMode *{ visibility:hidden !important; }
+  body.unitMode #unitPrintCard,
+  body.unitMode #unitPrintCard *{ visibility:visible !important; }
+  body.unitMode #unitPrintCard{
     position:absolute !important;
     inset:0 !important;
     margin:0 !important;
@@ -300,7 +314,7 @@ tfoot td{ font-weight:900; color:#fff; }
   <div class="small muted" id="extras" style="text-align:center; margin-top:10px;"></div>
 </div>
 
-<!-- ✅ كرت مخفي لتقرير السرية -->
+<!-- ✅ كرت تقرير السرية -->
 <div class="card" id="unitPrintCard" style="display:none;"></div>
 
 <div class="footerWho">
@@ -374,7 +388,6 @@ function escHtml(s){
 }
 
 function getState_(r){
-  // ✅ عمود platoon صار "الحالة": مستمر/احتياط/منقطع
   return norm(r.platoon || "");
 }
 
@@ -387,15 +400,14 @@ function printPart(which){
 }
 
 /* =========================
-   ✅ تقرير سرية منفصل للطباعة (بدون Pop-up)
+   ✅ تقرير سرية (بدون اسم/رقم وطني) + حل الهاتف 100%
    ========================= */
 let ALL_ROWS = [];
 
-/* ✅ هنا حذفنا name/nid لأنك ما تبيهم يظهروا في تقرير السرية */
 function makePersonRow(r){
   const serial = r.serial_unit || r.serial || "";
-  const st   = getState_(r) || "غير محدد";
-  const reg  = Number(r.registered || 0) === 1 ? "تم التسجيل" : "لم يتم التسجيل";
+  const st = getState_(r) || "غير محدد";
+  const reg = Number(r.registered || 0) === 1 ? "تم التسجيل" : "لم يتم التسجيل";
   return { serial, st, reg };
 }
 
@@ -474,19 +486,21 @@ function printUnitReport(depName){
     ${tableBlock("غير محدد", other)}
   `;
 
-  unitCard.style.display = "block";
+  // ✅ نبدّل الصفحة مؤقتاً لتقرير السرية (هذي أهم نقطة للهاتف)
+  document.body.classList.add("unitMode");
 
-  /* ✅ الهاتف والكمبيوتر: اطبع تقرير السرية فقط */
-  document.body.classList.add("print-unit");
-
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{
-      document.body.classList.remove("print-unit");
-      unitCard.innerHTML = "";
-      unitCard.style.display = "none";
-    }, 350);
-  }, 120);
+  // ✅ نضمن أن DOM يرسم قبل الطباعة (حل أندرويد)
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      window.print();
+      // نرجع للوضع الطبيعي بعد ما تفتح شاشة الطباعة
+      setTimeout(()=>{
+        document.body.classList.remove("unitMode");
+        unitCard.innerHTML = "";
+        unitCard.style.display = "none";
+      }, 700);
+    });
+  });
 }
 
 /* زر تقرير داخل الجدول */
