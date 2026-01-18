@@ -207,10 +207,17 @@ tfoot td{ font-weight:900; color:#fff; }
   body[data-print="table"] #summaryCard{ display:none !important; }
   body[data-print="summary"] #tableCard{ display:none !important; }
 
-  /* ✅ طباعة تقرير سرية منفصل داخل نفس الصفحة (بدون popups) */
-  body[data-print="unit"] #tableCard{ display:none !important; }
-  body[data-print="unit"] #summaryCard{ display:none !important; }
-  body[data-print="unit"] #unitPrintCard{ display:block !important; }
+  /* ✅ حل الهاتف/الكمبيوتر: اطبع تقرير السرية فقط */
+  body.print-unit *{ visibility:hidden !important; }
+  body.print-unit #unitPrintCard,
+  body.print-unit #unitPrintCard *{ visibility:visible !important; }
+  body.print-unit #unitPrintCard{
+    position:absolute !important;
+    inset:0 !important;
+    margin:0 !important;
+    width:100% !important;
+    display:block !important;
+  }
 }
 </style>
 </head>
@@ -293,7 +300,7 @@ tfoot td{ font-weight:900; color:#fff; }
   <div class="small muted" id="extras" style="text-align:center; margin-top:10px;"></div>
 </div>
 
-<!-- ✅ كرت مخفي لتقرير السرية (لا يغيّر التصميم) -->
+<!-- ✅ كرت مخفي لتقرير السرية -->
 <div class="card" id="unitPrintCard" style="display:none;"></div>
 
 <div class="footerWho">
@@ -384,14 +391,12 @@ function printPart(which){
    ========================= */
 let ALL_ROWS = [];
 
+/* ✅ هنا حذفنا name/nid لأنك ما تبيهم يظهروا في تقرير السرية */
 function makePersonRow(r){
   const serial = r.serial_unit || r.serial || "";
-  const name = r.name || "";
-  const nid  = r.national_id || "";
-  const dep  = r.dependency || "";
   const st   = getState_(r) || "غير محدد";
   const reg  = Number(r.registered || 0) === 1 ? "تم التسجيل" : "لم يتم التسجيل";
-  return { serial, name, nid, dep, st, reg };
+  return { serial, st, reg };
 }
 
 function tableBlock(title, arr){
@@ -404,8 +409,6 @@ function tableBlock(title, arr){
           <thead>
             <tr>
               <th>تسلسل اللواء</th>
-              <th>الاسم</th>
-              <th>الرقم الوطني</th>
               <th>الحالة</th>
               <th>التسجيل</th>
             </tr>
@@ -414,8 +417,6 @@ function tableBlock(title, arr){
             ${arr.map(x=>`
               <tr>
                 <td>${escHtml(x.serial)}</td>
-                <td style="text-align:right;">${escHtml(x.name)}</td>
-                <td>${escHtml(x.nid)}</td>
                 <td>${escHtml(x.st)}</td>
                 <td>${escHtml(x.reg)}</td>
               </tr>
@@ -475,15 +476,17 @@ function printUnitReport(depName){
 
   unitCard.style.display = "block";
 
-  document.body.setAttribute("data-print", "unit");
+  /* ✅ الهاتف والكمبيوتر: اطبع تقرير السرية فقط */
+  document.body.classList.add("print-unit");
+
   setTimeout(()=>{
     window.print();
     setTimeout(()=>{
-      document.body.removeAttribute("data-print");
+      document.body.classList.remove("print-unit");
       unitCard.innerHTML = "";
       unitCard.style.display = "none";
-    }, 300);
-  }, 80);
+    }, 350);
+  }, 120);
 }
 
 /* زر تقرير داخل الجدول */
